@@ -22,7 +22,7 @@ Additional Considerations
 -------------------------
 
  1. How would this function be scaled to dozens or hundreds of repositories?
-  * I need to understand this question better
+  * to come
  2. How would I automate this script and track progress over time?
   * Automate: Refactor this function as a dependency and add to a commit pipeline?
   * Track progress: Create an account based on the user that records the results per project
@@ -32,14 +32,13 @@ Additional Considerations
 Features To Come
 ----------------
 
-If I have time once I've built the core functionality, I'll add the following features:
-
  * refactor function to be a serverless service (S3 static site > API Gateway > Lambda function > SQS > S3 static site)
  * add option for user to provide Github web URL for a project to be scanned (instead of local download)
  * return the number of CVEs per dependency and the severity
+ * for non-supported frameworks, read dependencies right out of `/vendor` subdirectory?
  * expand the number of frameworks supported
-  * Pipenv: Pipfile.lock, Pipfile
-  * Ruby: Gemfile.lock, Gemfile
+   * pipenv: Pipfile.lock, Pipfile
+   * Ruby: Gemfile.lock, Gemfile
 
 Reference
 ---------
@@ -74,21 +73,9 @@ Logic Flow
 Cases
 -----
  
+ * project with no dependency list or in a non-supported framework
  * project with no dependencies
  * project with only good dependencies
- * project with no dependency list
- * https://github.com/rubik/pytrader
- * https://github.com/tanema/vlc-clickr
- 
- #####################################################
- # REFERENCE
- #####################################################
-
- # Circl CVE Search API
- # https://www.circl.lu/services/cve-search/#public-web-api-of-cve-search
-
- # A Python wrapper for searching Circl CVE Search API
- # 
-
-
- 
+ * project with vulnerable dependencies
+   * https://github.com/rubik/pytrader
+   * https://github.com/tanema/vlc-clickr
