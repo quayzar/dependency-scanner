@@ -30,44 +30,25 @@ def __main__():
     if not Path(project).is_dir():
         report('project directory not found')
         
-    # locate dependencies list
-    dep_files = ['requirements.txt'] # fixthis >> add support for other frameworks
+    # loop through possible dependency file names and look for file
+    dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
     for dep_file in dep_files:
         deps_list = Path(project + dep_file)
-        if deps_list.exists(): # found it
-            print "found {}".format(deps_list)
-            # fixthis >> determine file format based on name
-        else:
-            deps_list = "" # blank this variable so we know if we've run the entire list and found nothing
-    if deps_list == "": # fixthis >> replace this ugly way of telling we've not found any file out of all options
-        report('deps list not found')
+        # fixthis >> clean this up
+        if deps_list.exists(): # found it so exit
+            break
+        else: # didn't find it so blank the variable
+            deps_list = ""
+    if not deps_list: # no possible file found so return an error
+        report('dependency list not found')
 
-    report(deps_list)
-
-    ''' fixthis
+    # read dependencies from list
+    with open(str(deps_list)) as f: # open the file
+        for line in f: # loop through it line-by-line, processing as we go (more memory efficient)
+            print line.strip()
     
-    I'm hardcoding this path and filename for now, so I can focus on processing
-    the file data and calling the API. This will be replaced with a method to
-    a) prompt the user to point to the dependencies list manually (popup)
-    b) prompt the user for the project directory, then scan for common file names for supported frameworks (e.g. Python > requirements.txt)
-    c) other?
-    
-    If b) I will also need to iterate through logical alternatives. For example, if 'Gemfile.lock' isn't found, look for 'Gemfile', etc.
-
-    '''
-    file = "sample-projects/pytrader/requirements.txt" # fixthis
-
-    # load list of dependencies from list
-    
-    # load file content
-    
-    # distill dependencies list
-    
-    # loop through dependencies
-    
-    print 'done'
-    
-
+    # output results
+    print 'done' # fixthis
     
 if __name__ == '__main__':
     __main__()
