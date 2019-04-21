@@ -39,6 +39,8 @@ Features To Come
  * expand the number of frameworks supported
    * pipenv: Pipfile.lock, Pipfile
    * Ruby: Gemfile.lock, Gemfile
+ * replace current API with one that supports batch requests
+   * alternately, download all CVE data then make queries locally (particularly for large dependency sets)
 
 Supported Framework Dependency Lists
 --------------------------
