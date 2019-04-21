@@ -8,21 +8,40 @@ import sys # for system calls, like exit()
 from pathlib import Path # for determining if directories or files exist
 import requests # for making HTTP requests to API
 import json # for parsing JSON returned from API call
+from packaging.version import parse # used in parsing the current stable version from Pypi
 
 #####################################################
 # FUNCTIONS
 #####################################################
 
 # stop process with error
-def report(msg): # fixthis >> remove from prod?
+def report(msg): # fixthis >> remove from prod? display error in different fashion?
     print("FATAL ERROR: {}".format(msg))
     sys.exit()
     
-# return dependency and version (if any)
-# fixthis >> modify to support other frameworks than Python
-def parse_dep(dep):
-    return dep.strip().split('==')
-
+# determine current stable version
+def get_current_stable(package):
+    
+    print('working on {}'.format(package))
+    
+    # request package release data from Pypi
+    r = requests.get("https://pypi.python.org/pypi/" + package + "/json")
+    if r.status_code != 200:
+        report('Pypi API request failed: {}'.format(package))
+    
+    # distill current stable version
+    # fixthis >> is there a simpler, faster way of doing this without looping through all releases?
+    # as in, reverse releases, pop off highest version, confirm not prerelease
+    # I would need to confirm reversing preserves version order, so 2.1.12 is higher than 2.1.9
+    d = json.loads(r.text)
+    releases = d.get('releases', [])
+    version = parse('0')
+    for release in releases:
+        v = parse(release)
+        if not v.is_prerelease: # sort out all prereleases
+            version = max(version, v)
+    return version
+    
 #####################################################
 # MAIN FUNCTION
 #####################################################
@@ -59,7 +78,7 @@ def __main__():
             # fixthis >> add code to handle expected, non-relevant sections within "requirement.txt" (like section headers)
         
             # process data
-            data = parse_dep(line)
+            data = line.strip().split('==') # parse package name and version
             package = data[0]
             try: # not all packages come with specific versions so EAFP
                 version = data[1]
@@ -70,12 +89,15 @@ def __main__():
             print("processing {} (v{})".format(package,version)) # fixthis >> remove
             
             # fixthis >> query latest upstream version
+            current_stable = get_current_stable(package)
+            print(current_stable)
             # fixthis >> now we have current upstream version for specific dependency
 
+            '''
             # check for CVEs
             r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:" + platform + ":" + package + ":" + version)
             if r.status_code != 200:
-                report('API request failed')
+                report('API request failed: {}/{}/{}'.format(platform, package, version))
                 
             # process CVEs (if any)
             cve_data = [] # array to contain cve data
@@ -103,6 +125,9 @@ def __main__():
                 print(cve_data)
             else:
                 print("no CVEs found")
+            
+            '''
+    print('here')
 
     '''
     # fixthis >> ultimately process data output and add to result array (apply html, classes, etc)
