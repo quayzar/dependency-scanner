@@ -99,8 +99,10 @@ def __main__():
                     'score': score,
                     'severity': severity
                 })
-                
-            print(cve_data)
+            if(len(cve_data)):
+                print(cve_data)
+            else:
+                print("no CVEs found")
 
     '''
     # fixthis >> ultimately process data output and add to result array (apply html, classes, etc)
