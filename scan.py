@@ -15,7 +15,7 @@ import json # for parsing JSON returned from API call
 
 # stop process with error
 def report(msg): # fixthis >> remove from prod?
-    print "FATAL ERROR: {}".format(msg)
+    print("FATAL ERROR: {}".format(msg))
     sys.exit()
     
 # return dependency and version (if any)
@@ -28,7 +28,7 @@ def parse_dep(dep):
 #####################################################
 
 def __main__():
-
+    
     # definitions
     results = [] # array to contain results data
     project = "sample-projects/pytrader/" # fixthis >> query this from user
@@ -52,14 +52,23 @@ def __main__():
     # read dependencies from list
     
     # fixthis
-    r = requests.get("http://cve.circl.lu/api/cvefor/BeautifulSoup")
-    if r.status_code == '200':
+
+    # cpe:2.3:a:python:pillow:2.6.1
+    package = 'pillow'
+    version = '2.6.1'
+    r = requests.get("http://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ':' + version)
+    if r.status_code != 200:
         report('API request failed')
 
+    # output dependencies
+    # fixthis >> ultimately process data output and add to result array (apply html, classes, etc)
     data = json.loads(r.text)
-    print data
-    report('stopped')
-    
+    for entry in data:
+        print("\nSummary: " + entry['summary'])
+        print("CVE: " + entry['id'])
+        print("CVS Score: " + str(entry['cvss']))
+
+    sys.exit() # fixthis >> remove
     
     with open(str(deps_list)) as lines: # open the file
         for line in lines: # loop through it line-by-line, processing as we go (more memory efficient)
@@ -69,7 +78,7 @@ def __main__():
             
                 
     # output results
-    print 'done' # fixthis
+    print('done') # fixthis
     
 if __name__ == '__main__':
     __main__()
