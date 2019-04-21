@@ -40,19 +40,12 @@ Features To Come
    * pipenv: Pipfile.lock, Pipfile
    * Ruby: Gemfile.lock, Gemfile
 
-Reference
----------
-
-Some useful links for reference:
-
- * [Circl's CV Search API](https://www.circl.lu/services/cve-search/#public-web-api-of-cve-search)
- * [A python wrapper to query the CVE Search API](https://github.com/znb/Scripts/blob/7f22a727073ba1185e06b9ef42475f33279c645e/Security/cve-search.py)
- 
- 
 Supported Framework Dependency Lists
 --------------------------
 
  * Python: requirements.txt
+ * fixthis >> add more Python-specific list locations / names
+ * fixthis >> ultimately add support for other platforms (e.g. Ruby)
 
 Logic Flow
 ----------
