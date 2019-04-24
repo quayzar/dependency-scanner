@@ -29,6 +29,11 @@ Additional Considerations
  3. How would this function be integrated into a CI / CD pipeline?
     * See 2a above
 
+Caveats & Assumptions
+---------------------
+
+ * currently only configured to scan Python projects
+
 Features To Come
 ----------------
 
