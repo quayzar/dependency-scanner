@@ -9,6 +9,8 @@ from pathlib import Path # for determining if directories or files exist
 import requests # for making HTTP requests to API
 import json # for parsing JSON returned from API call
 from packaging.version import parse # used in parsing the current stable version from Pypi
+from colorama import init, Fore, Back, Style # to provide colored output in terminal
+init(autoreset=True)
 
 #####################################################
 # FUNCTIONS
@@ -16,7 +18,7 @@ from packaging.version import parse # used in parsing the current stable version
 
 # stop process with error
 def report(msg): # fixthis >> remove from prod? display error in different fashion?
-    print("FATAL ERROR: {}".format(msg))
+    print(Fore.YELLOW + Back.RED + Style.BRIGHT + "FATAL ERROR: {}".format(msg))
     sys.exit()
     
 # determine current stable version
@@ -69,7 +71,7 @@ def process_cves(r):
 #####################################################
 
 def __main__():
-        
+    
     # definitions
     results = [] # array to contain results data
     project = "sample-projects/" # fixthis >> query this from user
