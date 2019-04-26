@@ -13,6 +13,13 @@ from packaging.version import parse
 from colorama import init, Fore, Style
 init(autoreset=True)
 
+# globals
+VERBOSE = False
+BOOLEAN = False
+TOTAL = 0
+OUTDATED = 0
+VULNERABLE = 0
+
 #####################################################
 # FUNCTIONS
 #####################################################
@@ -91,25 +98,31 @@ def process_cves(cves):
         return
 
     # CVEs found so output data
-    print(Fore.RED + "{} CVE{} found!".format(length, "" if length == 1 else "s"))
-    for count, cve in enumerate(cves):
+    print(Style.BRIGHT + Fore.RED + "{} CVE{} found!".format(length, "" if length == 1 else "s"))
+    if VERBOSE:
 
-        print("\n{}. {}".format(count+1, cve['id']))
-        print(cve['summary'])
+        for count, cve in enumerate(cves):
 
-        # assign severity (based on score)
-        score = float(cve['cvss'])
-        if score <= 3.9:
-            severity = "low"
-        elif 4.0 <= score <= 6.9:
-            severity = "medium"
-        elif score >= 7.0:
-            severity = "high"
+            print("\n{}. {}".format(count+1, cve['id']))
+            print(cve['summary'])
 
-        print("Severity: {}".format(severity))
+            # assign severity (based on score)
+            score = float(cve['cvss'])
+            if score <= 3.9:
+                severity = "low"
+            elif 4.0 <= score <= 6.9:
+                severity = "medium"
+            elif score >= 7.0:
+                severity = "high"
+
+            print("Severity: {}".format(severity))
+            
+    return length
 
 def process_dependencies(deps_list):
     """ Process dependencies from project list """
+    
+    global TOTAL, OUTDATED, VULNERABLE
 
     with open(str(deps_list)) as lines: # fixthis >> add progress bar
 
@@ -124,6 +137,7 @@ def process_dependencies(deps_list):
                     line = tmp[0].strip()
 
                 # define package and version
+                TOTAL += 1
                 data = line.split('==')
                 package = data[0]
                 try: # not all packages come with specific versions so EAFP
@@ -135,7 +149,8 @@ def process_dependencies(deps_list):
                 # gather current upstream stable version
                 current_stable = get_current_stable(package)
                 if current_stable > version and version != "*":
-                    print(Fore.YELLOW + "Out of date! Current version: {}".format(current_stable))
+                    OUTDATED += 1
+                    print(Style.BRIGHT + Fore.YELLOW + "Out of date! Current version: {}".format(current_stable))
                 else:
                     print(Fore.GREEN + "Version is up to date")
 
@@ -145,8 +160,9 @@ def process_dependencies(deps_list):
                     throw_error('API request failed: {}/{}'.format(package, version))
 
                 # process CVE data (if any)
-                process_cves(request.json())
-
+                vulnerable_deps = process_cves(request.json())
+                if vulnerable_deps != None:
+                    VULNERABLE += vulnerable_deps
 
 #####################################################
 # MAIN FUNCTION
@@ -160,12 +176,16 @@ def __main__():
     parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies")
     parser.add_argument('--path', '-p', help='Local path to target project directory')
     parser.add_argument('--boolean', '-b', action="store_true", help="Return Boolean assessment (for automated testing)") # fixthis >> add
+    parser.add_argument('--verbose', '-v', action="store_true", help="Return CVE details")
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
     parser.add_argument('--check', '-c', action="store_true", help="Run %(prog)s on itself (self-check)")
 
     # parse user-provided input
     args = parser.parse_args()
-    boolean = args.boolean
+    global VERBOSE
+    VERBOSE = args.verbose
+    global BOOLEAN
+    BOOLEAN = args.boolean
 
     # determine target path
     path = determine_project_path(args)
@@ -176,7 +196,18 @@ def __main__():
     # process dependencies within list
     process_dependencies(deps_list)
 
-    print('Scan complete')
+    # compile summary
+    print(Style.BRIGHT + '\nScan complete')
+    print("{} dependenc{} scanned".format(TOTAL, "y" if TOTAL == 1 else "ies"))
+    # fixthis >> add percentages?
+    if OUTDATED:
+        print(Style.BRIGHT + Fore.YELLOW + '{} outdated dependenc{}'.format(OUTDATED, "y" if OUTDATED == 1 else "ies"))
+    else:
+        print(Fore.GREEN + "0 outdated dependencies")
+    if VULNERABLE:
+        print(Style.BRIGHT + Fore.RED + '{} vulnerable dependenc{}'.format(VULNERABLE, "y" if VULNERABLE == 1 else "ies"))
+    else:
+        print(Fore.GREEN + "0 vulnerable dependencies\n")
 
 if __name__ == '__main__':
     __main__()
