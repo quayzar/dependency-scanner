@@ -23,7 +23,7 @@ def throw_error(msg):
     sys.exit()
 
 # determine and confirm project directory
-def get_project_path(args):
+def determine_project_path(args):
     
     # assign user-provided values locally
     path = args.path
@@ -44,19 +44,57 @@ def get_project_path(args):
         
     return path
 
-def find_dependencies_list(project):
-    dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
+# locate the dependencies list within the project directory
+def find_dependencies_list(path):
+    
+    # fixthis >> add support for different requirements files for multiple environment within /requirements directory
+
+    ''' Note:
+    This function currently only has support for the most common dependency list filename, in the expected location.
+    Future updates will include support for Pipfile (from Pipenv), library dependencies (/setup.py), and environment-specific
+    dependency lists (/requirements/prod.txt, /requirements/dev.txt, etc).
+    '''
+
+    # check for common dependency list names
+    dep_files = ['requirements.txt'] # fixthis >> add filename here to add support
     for dep_file in dep_files:
-        deps_list = Path(project + dep_file)
-        # fixthis >> clean this up
-        if deps_list.exists(): # found it so exit
-            platform = "python" # fixthis >> add support for other platforms (e.g. Ruby)
+        deps_list = Path(path + '/' + dep_file)
+        if deps_list.exists(): # found it so move on
             break
-        deps_list = "" # we blank deps_list so we'll know when we've run through the entire list unsuccessfully
+        deps_list = "" # not found, so blank this variable
 
     # if no dependency file found return an error
     if not deps_list:
-        throw_error('dependency list not found')
+        throw_error('No supported dependency list found')
+    elif not dep_file is 'requirements.txt':
+        throw_error('This file format is not yet supported: {}'.format(dep_file))
+
+    # render dependencies list from dependency file
+    with open(str(deps_list)) as lines: # open the file
+    
+        # loop through file contents and process
+        for line in lines:
+            line = line.strip()
+            if len(line) > 0 and not line.startswith('#'): # skip blank lines and comments
+
+                # check for inline comments and remove (if found)
+                if '#' in line:
+                    tmp = line.split('#')
+                    line = tmp[0].strip()
+
+                # define package and version
+                data = line.split('==')
+                package = data[0]
+                print('Package: {}'.format(package))
+                try: # not all packages come with specific versions so EAFP
+                    version = data[1]
+                    print("Version: {}".format(version))
+                except IndexError: # no version provided so use wild card to check for any CVEs
+                    version = "*"
+                
+                
+
+    sys.exit()
     
 # determine current stable version
 def get_current_stable(package):
@@ -111,63 +149,25 @@ def __main__():
     
     # configure command-line options
     parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies")
-
-    # local path to project directory
     parser.add_argument('--path', '-p', help='local path to target project directory')
-
-    # return Boolean value (for integration into automated tests) vs details (default=False)
     parser.add_argument('--boolean', '-b', action="store_true", help="return Boolean assessment (for automated testing)")
-
-    # strict mode - flag error on outdated packages (default=False)
     parser.add_argument('--strict', '-s', action="store_true", help="flag outdated dependencies as critical issue")
-
-    # output current version
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
-    
-    # self-check dependencies
     parser.add_argument('--check', '-c', action="store_true", help="run %(prog)s on itself (self-check)")
     
     # parse arguments
     # fixthis >> simpler way of doing?
     args = parser.parse_args()
-    #project = args.path
     boolean = args.boolean
     strict = args.strict
-    #check = args.check
     
-    path = get_project_path(args)
-    print(path)
+    # determine target path
+    path = determine_project_path(args)
 
-    '''''
-    # determine what we're checking
-    if not project: # no user-provided path
-        if not check: # no self-check
-            throw_error('Please either provide the path to a local project directory or call the "--check" flag to self-check. Use "--help" for more information.')
-        
-        # set parent directory as project target    
-        from os.path import dirname, abspath
-        project = dirname(abspath(__file__))
+    # find dependency list within project directory
+    deps_list = find_dependencies_list(path)
     
-    # confirm project directory exists
-    if not Path(project).is_dir():
-        throw_error('project directory not found')
-    
-    '''
-    throw_error('stropped')
-
-    # loop through possible dependency file names and look for file
-    dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
-    for dep_file in dep_files:
-        deps_list = Path(project + dep_file)
-        # fixthis >> clean this up
-        if deps_list.exists(): # found it so exit
-            platform = "python" # fixthis >> add support for other platforms (e.g. Ruby)
-            break
-        deps_list = "" # we blank deps_list so we'll know when we've run through the entire list unsuccessfully
-
-    # if no dependency file found return an error
-    if not deps_list:
-        throw_error('dependency list not found')
+    sys.exit()
 
     # loop through dependencies
     with open(str(deps_list)) as lines: # open the file
@@ -193,7 +193,7 @@ def __main__():
             current_stable = get_current_stable(package)
 
             # check for CVEs
-            r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:" + platform + ":" + package + ":" + version)
+            r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ":" + version)
             if r.status_code != 200:
                 throw_error('API request failed: {}/{}/{}'.format(platform, package, version))
                 
