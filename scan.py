@@ -12,22 +12,53 @@ from packaging.version import parse # used in parsing the current stable version
 from colorama import init, Fore, Back, Style # to provide colored output in terminal
 init(autoreset=True)
 
+# needed for project directory selector popup
+from tkinter import Tk
+from tkinter.filedialog import askdirectory
+
 #####################################################
 # FUNCTIONS
 #####################################################
 
 # stop process with error
-def report(msg): # fixthis >> remove from prod? display error in different fashion?
-    print(Fore.YELLOW + Back.RED + Style.BRIGHT + "FATAL ERROR: {}".format(msg))
+def throw_error(msg):
+    print(Fore.RED + Style.BRIGHT + "FATAL ERROR: {}".format(msg))
     sys.exit()
+
+# prompt user to select project directory
+def get_project():
+    print(Fore.BLUE + "To start the dependency scan, please select the project directory in the popup dialog.") # fixthis
+    Tk().withdraw()
+    project = askdirectory()
+    project = ""
+    if not project:
+        throw_error("no project directory indicated")
+    elif not Path(project).is_dir():
+        throw_error('project directory not found')
+    return project
+
+def find_dependencies_list(project):
+    dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
+    for dep_file in dep_files:
+        deps_list = Path(project + dep_file)
+        # fixthis >> clean this up
+        if deps_list.exists(): # found it so exit
+            platform = "python" # fixthis >> add support for other platforms (e.g. Ruby)
+            break
+        deps_list = "" # we blank deps_list so we'll know when we've run through the entire list unsuccessfully
+
+    # if no dependency file found return an error
+    if not deps_list:
+        throw_error('dependency list not found')
     
+
 # determine current stable version
 def get_current_stable(package):
     
     # request package release data from Pypi
     r = requests.get("https://pypi.python.org/pypi/" + package + "/json")
     if r.status_code != 200:
-        report('Pypi API request failed: {}'.format(package))
+        throw_error('Pypi API request failed: {}'.format(package))
     
     # distill current stable version
     data = json.loads(r.text)
@@ -72,14 +103,12 @@ def process_cves(r):
 
 def __main__():
     
-    # definitions
-    results = [] # array to contain results data
-    project = "sample-projects/" # fixthis >> query this from user
-    cve_lookup_url = "https://www.cvedetails.com/cve/" # fixthis >> used to link to CVE details
+    # query project directory
+    project = get_project()
     
     # confirm project directory exists
     if not Path(project).is_dir():
-        report('project directory not found')
+        throw_error('project directory not found')
         
     # loop through possible dependency file names and look for file
     dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
@@ -93,7 +122,7 @@ def __main__():
 
     # if no dependency file found return an error
     if not deps_list:
-        report('dependency list not found')
+        throw_error('dependency list not found')
 
     # loop through dependencies
     with open(str(deps_list)) as lines: # open the file
@@ -121,7 +150,7 @@ def __main__():
             # check for CVEs
             r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:" + platform + ":" + package + ":" + version)
             if r.status_code != 200:
-                report('API request failed: {}/{}/{}'.format(platform, package, version))
+                throw_error('API request failed: {}/{}/{}'.format(platform, package, version))
                 
             # process CVEs (if any)
             cve_data = process_cves(r)
