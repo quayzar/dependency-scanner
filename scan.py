@@ -69,32 +69,7 @@ def find_dependencies_list(path):
     elif not dep_file is 'requirements.txt':
         throw_error('This file format is not yet supported: {}'.format(dep_file))
 
-    # render dependencies list from dependency file
-    with open(str(deps_list)) as lines: # open the file
-    
-        # loop through file contents and process
-        for line in lines:
-            line = line.strip()
-            if len(line) > 0 and not line.startswith('#'): # skip blank lines and comments
-
-                # check for inline comments and remove (if found)
-                if '#' in line:
-                    tmp = line.split('#')
-                    line = tmp[0].strip()
-
-                # define package and version
-                data = line.split('==')
-                package = data[0]
-                print('Package: {}'.format(package))
-                try: # not all packages come with specific versions so EAFP
-                    version = data[1]
-                    print("Version: {}".format(version))
-                except IndexError: # no version provided so use wild card to check for any CVEs
-                    version = "*"
-                
-                
-
-    sys.exit()
+    return deps_list
     
 # determine current stable version
 def get_current_stable(package):
@@ -107,12 +82,13 @@ def get_current_stable(package):
     # distill current stable version
     data = json.loads(r.text)
     releases = data.get('releases', [])
-    version = parse('0')
+    version = parse('0') # default
     for release in releases:
         v = parse(release)
         if not v.is_prerelease:
             version = max(version, v)
-    return version
+            
+    return str(version)
     
 # process CVEs (if any)
 def process_cves(r):
@@ -140,7 +116,63 @@ def process_cves(r):
         })
         
     return cve_data    
+
+# process dependencies
+def process_dependencies(deps_list):
     
+    results = []
+    with open(str(deps_list)) as lines:
+    
+        # loop through file contents and process
+        for line in lines:
+            line = line.strip()
+            if len(line) > 0 and not line.startswith('#'): # skip blank lines and comments
+
+                # check for inline comments and remove (if found)
+                if '#' in line:
+                    tmp = line.split('#')
+                    line = tmp[0].strip()
+
+                # define package and version
+                data = line.split('==')
+                package = data[0]
+                try: # not all packages come with specific versions so EAFP
+                    version = data[1]
+                except IndexError: # no version provided so use wild card to check for any CVEs
+                    version = "*"
+                print("\nProcessing {} {}".format(package,version)) # fixthis >> remove
+                
+                # gather current upstream stable version
+                current_stable = get_current_stable(package)
+                # fixthis >> add strict checking to flag outdated packages as critical issues
+                '''
+                if strict: # strict mode so flag outdated packages as critical issues
+                    if parse(current_stable) > parse(version):
+                        print('ISSUE: version outdated!')
+                '''
+                
+                '''
+
+                # check for CVEs
+                r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ":" + version)
+                if r.status_code != 200:
+                    throw_error('API request failed: {}/{}/{}'.format(platform, package, version))
+                
+                # process CVEs (if any)
+                cve_data = process_cves(r)
+                
+                '''
+                
+                # add to results
+                results.append({
+                    'package':          package,
+                    'version':          version,
+                    'current_stable':   current_stable
+                })
+    
+    print(results)
+    sys.exit()
+
 #####################################################
 # MAIN FUNCTION
 #####################################################
@@ -166,6 +198,11 @@ def __main__():
 
     # find dependency list within project directory
     deps_list = find_dependencies_list(path)
+    
+    # process dependencies within list
+    results = process_dependencies(deps_list)
+
+    print(results)
     
     sys.exit()
 
