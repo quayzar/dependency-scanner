@@ -96,8 +96,9 @@ def process_cves(r):
     cve_data = [] # array to contain cve data
     for cve in r.json():
         
-        # define id and details link
-        cve_id = cve['id'] # fixthis >> link to CVE details: cve_lookup_url + cve['id']
+        # define CVE details
+        cve_id = cve['id']
+        cve_summary = cve['summary']
 
         # assign severity (based on score)
         score = float(cve['cvss']) # we float the value because sometimes it comes through as a string
@@ -111,6 +112,7 @@ def process_cves(r):
         # add cve data
         cve_data.append({
             'cve_id': cve_id,
+            'cve_summary': cve_summary,
             'score': score,
             'severity': severity
         })
@@ -151,28 +153,24 @@ def process_dependencies(deps_list):
                         print('ISSUE: version outdated!')
                 '''
                 
-                '''
-
                 # check for CVEs
                 r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ":" + version)
                 if r.status_code != 200:
-                    throw_error('API request failed: {}/{}/{}'.format(platform, package, version))
+                    throw_error('API request failed: {}/{}'.format(package, version))
                 
-                # process CVEs (if any)
+                # gather CVE data (if any)
                 cve_data = process_cves(r)
-                
-                '''
                 
                 # add to results
                 results.append({
                     'package':          package,
                     'version':          version,
-                    'current_stable':   current_stable
+                    'current_stable':   current_stable,
+                    'cve':              cve_data
                 })
+                
+    return results
     
-    print(results)
-    sys.exit()
-
 #####################################################
 # MAIN FUNCTION
 #####################################################
@@ -182,8 +180,8 @@ def __main__():
     # configure command-line options
     parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies")
     parser.add_argument('--path', '-p', help='local path to target project directory')
-    parser.add_argument('--boolean', '-b', action="store_true", help="return Boolean assessment (for automated testing)")
-    parser.add_argument('--strict', '-s', action="store_true", help="flag outdated dependencies as critical issue")
+    parser.add_argument('--boolean', '-b', action="store_true", help="return Boolean assessment (for automated testing)") # fixthis >> add
+    parser.add_argument('--strict', '-s', action="store_true", help="flag outdated dependencies as critical issue") # fixthis >> add
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
     parser.add_argument('--check', '-c', action="store_true", help="run %(prog)s on itself (self-check)")
     
@@ -192,7 +190,7 @@ def __main__():
     args = parser.parse_args()
     boolean = args.boolean
     strict = args.strict
-    
+        
     # determine target path
     path = determine_project_path(args)
 
@@ -201,47 +199,11 @@ def __main__():
     
     # process dependencies within list
     results = process_dependencies(deps_list)
-
-    print(results)
-    
-    sys.exit()
-
-    # loop through dependencies
-    with open(str(deps_list)) as lines: # open the file
-        for line in lines: # loop through it line-by-line, processing as we go (more memory efficient)
-        
-            # fixthis >> add code to handle expected, non-relevant sections within "requirement.txt" (like section headers)
-        
-            # process data
-            data = line.strip().split('==') # parse package name and version
-            package = data[0]
             
-            results.append({'name': package})
-            
-            try: # not all packages come with specific versions so EAFP
-                version = data[1]
-            except IndexError: # no version provided so use wild card to check for any CVEs
-                version = "*"
-                
-            # fixthis >> now we have dependency and version currently in use (for output to result)
-            print("processing {} (v{})".format(package,version)) # fixthis >> remove
-            
-            # gather current upstream stable version
-            current_stable = get_current_stable(package)
-
-            # check for CVEs
-            r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ":" + version)
-            if r.status_code != 200:
-                throw_error('API request failed: {}/{}/{}'.format(platform, package, version))
-                
-            # process CVEs (if any)
-            cve_data = process_cves(r)
-            
-            print(current_stable)
-            print(cve_data)
-                
     # output results
-    print(results)
+    for r in results:
+        print(r['package'])
+    
     print('done') # fixthis
     
 if __name__ == '__main__':
