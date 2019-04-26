@@ -5,34 +5,44 @@
 #################################n####################
 
 import sys # for system calls, like exit()
-from pathlib import Path # for determining if directories or files exist
-import requests # for making HTTP requests to API
-import json # for parsing JSON returned from API call
-from packaging.version import parse # used in parsing the current stable version from Pypi
-from colorama import init, Fore, Back, Style # to provide colored output in terminal
-init(autoreset=True)
 import argparse # for parsing command-line arguments
+from pathlib import Path # for determining if directories and/or files exist
+import requests # for making HTTP requests to API
+import json # for parsing JSON
+from packaging.version import parse # used in parsing the current stable version from Pypi
+from colorama import init, Fore, Back, Style # to provide cross-platform support for colored output in terminal
+init(autoreset=True)
 
 #####################################################
 # FUNCTIONS
 #####################################################
 
-# stop process with error
+# output error message and stop
 def throw_error(msg):
-    print(Fore.RED + Style.BRIGHT + "FATAL ERROR: {}".format(msg))
+    print(Fore.RED + Style.BRIGHT + "FATAL ERROR!\n{}".format(msg))
     sys.exit()
 
-# prompt user to select project directory
-def get_project():
-    print(Fore.BLUE + "To start the dependency scan, please select the project directory in the popup dialog.") # fixthis
-    Tk().withdraw()
-    project = askdirectory()
-    project = ""
-    if not project:
-        throw_error("no project directory indicated")
-    elif not Path(project).is_dir():
-        throw_error('project directory not found')
-    return project
+# determine and confirm project directory
+def get_project_path(args):
+    
+    # assign user-provided values locally
+    path = args.path
+    check = args.check
+    
+    # determine what we're checking
+    if not path: # no user-provided project path
+        if not check: # no self-check flag
+            throw_error('Please either provide the path to a local project directory or call the "--check" flag to perform a self-check. Use "--help" for more information.')
+        
+        # set Dependency Scanner project directory as target    
+        from os.path import dirname, abspath
+        path = dirname(abspath(__file__))
+    
+    # confirm project directory exists
+    if not Path(path).is_dir():
+        throw_error('Project directory not found: {}'.format(path))
+        
+    return path
 
 def find_dependencies_list(project):
     dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
@@ -48,7 +58,6 @@ def find_dependencies_list(project):
     if not deps_list:
         throw_error('dependency list not found')
     
-
 # determine current stable version
 def get_current_stable(package):
     
@@ -112,9 +121,6 @@ def __main__():
     # strict mode - flag error on outdated packages (default=False)
     parser.add_argument('--strict', '-s', action="store_true", help="flag outdated dependencies as critical issue")
 
-    # verbose output (default=False)
-    parser.add_argument('--verbose', '-v', action="store_true", help="verbose output")
-    
     # output current version
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
     
@@ -124,17 +130,15 @@ def __main__():
     # parse arguments
     # fixthis >> simpler way of doing?
     args = parser.parse_args()
-    project = args.path
+    #project = args.path
     boolean = args.boolean
     strict = args.strict
-    verbose = args.verbose
-    check = args.check
-
-    # fixthis >> conflict btwn path and check? what do to if both are provided?
-    # if path and check, do path
-    # check is optional
-    # throw error on no path, no check
+    #check = args.check
     
+    path = get_project_path(args)
+    print(path)
+
+    '''''
     # determine what we're checking
     if not project: # no user-provided path
         if not check: # no self-check
@@ -147,10 +151,10 @@ def __main__():
     # confirm project directory exists
     if not Path(project).is_dir():
         throw_error('project directory not found')
-        
-        
-    print(project)
-    sys.exit()
+    
+    '''
+    throw_error('stropped')
+
     # loop through possible dependency file names and look for file
     dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
     for dep_file in dep_files:
