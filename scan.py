@@ -101,19 +101,13 @@ def process_cves(r):
 def __main__():
     
     # configure command-line options
-    parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies") # fixthis
-    '''''
-    --verbose (-v) >> output every action as it takes it || set verbose==True
-    --path (-p) >> path to local project directory (REQUIRED)
-    --boolean (-b) >> return True for no issues False for issues || for integration into automated testing
-    --strict (-s) >> throws warning on outdated packages || False by default
-    '''
-    
-    # local path to project directory (REQUIRED)
-    parser.add_argument('--path', '-p', help='local path to target project directory (REQUIRED)') # fixthis >> throw error when None
+    parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies")
+
+    # local path to project directory
+    parser.add_argument('--path', '-p', help='local path to target project directory')
 
     # return Boolean value (for integration into automated tests) vs details (default=False)
-    parser.add_argument('--bool', '-b', action="store_true", help="return Boolean assessment (for automated testing)")
+    parser.add_argument('--boolean', '-b', action="store_true", help="return Boolean assessment (for automated testing)")
 
     # strict mode - flag error on outdated packages (default=False)
     parser.add_argument('--strict', '-s', action="store_true", help="flag outdated dependencies as critical issue")
@@ -124,19 +118,39 @@ def __main__():
     # output current version
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
     
+    # self-check dependencies
+    parser.add_argument('--check', '-c', action="store_true", help="run %(prog)s on itself (self-check)")
+    
     # parse arguments
+    # fixthis >> simpler way of doing?
     args = parser.parse_args()
-    print(args)
+    project = args.path
+    boolean = args.boolean
+    strict = args.strict
+    verbose = args.verbose
+    check = args.check
+
+    # fixthis >> conflict btwn path and check? what do to if both are provided?
+    # if path and check, do path
+    # check is optional
+    # throw error on no path, no check
     
-    throw_error('stoppped')
-    
-    # query project directory
-    project = get_project()
+    # determine what we're checking
+    if not project: # no user-provided path
+        if not check: # no self-check
+            throw_error('Please either provide the path to a local project directory or call the "--check" flag to self-check. Use "--help" for more information.')
+        
+        # set parent directory as project target    
+        from os.path import dirname, abspath
+        project = dirname(abspath(__file__))
     
     # confirm project directory exists
     if not Path(project).is_dir():
         throw_error('project directory not found')
         
+        
+    print(project)
+    sys.exit()
     # loop through possible dependency file names and look for file
     dep_files = ['requirements.txt'] # fixthis >> add support for other framework filenames?
     for dep_file in dep_files:
