@@ -66,33 +66,33 @@ def get_current_stable(package):
     """ Determine the current stable upstream version for a given package """
 
     # request package release data from Pypi
-    r = requests.get("https://pypi.python.org/pypi/" + package + "/json")
-    if r.status_code != 200:
+    request = requests.get("https://pypi.python.org/pypi/" + package + "/json")
+    if request.status_code != 200:
         throw_error('Pypi API request failed: {}'.format(package))
 
     # distill current stable version
-    data = json.loads(r.text)
+    data = json.loads(request.text)
     releases = data.get('releases', [])
     version = parse('0') # default
     for release in releases:
-        v = parse(release)
-        if not v.is_prerelease:
-            version = max(version, v)
+        test = parse(release)
+        if not test.is_prerelease:
+            version = max(version, test)
 
     return str(version)
 
-def process_cves(r):
+def process_cves(cves):
     """ Process CVE data (if any) """
 
     # check number of CVEs (if any)
-    l = len(r)
-    if l == 0: # no CVEs so stop
+    length = len(cves)
+    if length == 0: # no CVEs so stop
         print(Fore.GREEN + "No CVEs found")
         return
 
     # CVEs found so output data
-    print(Fore.RED + "{} CVE{} found!".format(l, "" if l == 1 else "s"))
-    for count, cve in enumerate(r):
+    print(Fore.RED + "{} CVE{} found!".format(length, "" if length == 1 else "s"))
+    for count, cve in enumerate(cves):
 
         print("\n{}. {}".format(count+1, cve['id']))
         print(cve['summary'])
@@ -103,7 +103,7 @@ def process_cves(r):
             severity = "low"
         elif 4.0 <= score <= 6.9:
             severity = "medium"
-        elif 7.0 <= score:
+        elif score >= 7.0:
             severity = "high"
 
         print("Severity: {}".format(severity))
@@ -140,12 +140,12 @@ def process_dependencies(deps_list):
                     print(Fore.GREEN + "Version is up to date")
 
                 # check for CVEs
-                r = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ":" + version)
-                if r.status_code != 200:
+                request = requests.get("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:" + package + ":" + version)
+                if request.status_code != 200:
                     throw_error('API request failed: {}/{}'.format(package, version))
 
                 # process CVE data (if any)
-                process_cves(r.json())
+                process_cves(request.json())
 
 
 #####################################################
@@ -158,10 +158,10 @@ def __main__():
 
     # configure command-line options
     parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies")
-    parser.add_argument('--path', '-p', help='local path to target project directory')
-    parser.add_argument('--boolean', '-b', action="store_true", help="return Boolean assessment (for automated testing)") # fixthis >> add
+    parser.add_argument('--path', '-p', help='Local path to target project directory')
+    parser.add_argument('--boolean', '-b', action="store_true", help="Return Boolean assessment (for automated testing)") # fixthis >> add
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
-    parser.add_argument('--check', '-c', action="store_true", help="run %(prog)s on itself (self-check)")
+    parser.add_argument('--check', '-c', action="store_true", help="Run %(prog)s on itself (self-check)")
 
     # parse user-provided input
     args = parser.parse_args()
@@ -176,7 +176,7 @@ def __main__():
     # process dependencies within list
     process_dependencies(deps_list)
 
-    print('done') # fixthis
+    print('Scan complete')
 
 if __name__ == '__main__':
     __main__()
