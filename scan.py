@@ -69,7 +69,7 @@ def find_dependencies_list(path):
 
     return deps_list
 
-def get_current_stable(package):
+def get_upstream(package):
     """ Determine the current stable upstream version for a given package """
 
     # request package release data from Pypi
@@ -95,7 +95,7 @@ def process_cves(cves):
     length = len(cves)
     if length == 0: # no CVEs so stop
         print(Fore.GREEN + "No CVEs found")
-        return
+        return 0
 
     # CVEs found so output data
     print(Style.BRIGHT + Fore.RED + "{} CVE{} found!".format(length, "" if length == 1 else "s"))
@@ -116,12 +116,12 @@ def process_cves(cves):
                 severity = "high"
 
             print("Severity: {}".format(severity))
-            
+
     return length
 
 def process_dependencies(deps_list):
     """ Process dependencies from project list """
-    
+
     global TOTAL, OUTDATED, VULNERABLE
 
     with open(str(deps_list)) as lines: # fixthis >> add progress bar
@@ -147,10 +147,10 @@ def process_dependencies(deps_list):
                 print(Style.BRIGHT + "\n{} ({})".format(package, version))
 
                 # gather current upstream stable version
-                current_stable = get_current_stable(package)
-                if current_stable > version and version != "*":
+                upstream = get_upstream(package)
+                if upstream > version and version != "*":
                     OUTDATED += 1
-                    print(Style.BRIGHT + Fore.YELLOW + "Out of date! Current version: {}".format(current_stable))
+                    print(Style.BRIGHT + Fore.YELLOW + "Out of date - Current version is {}".format(upstream))
                 else:
                     print(Fore.GREEN + "Version is up to date")
 
@@ -161,7 +161,7 @@ def process_dependencies(deps_list):
 
                 # process CVE data (if any)
                 vulnerable_deps = process_cves(request.json())
-                if vulnerable_deps != None:
+                if vulnerable_deps is not None:
                     VULNERABLE += vulnerable_deps
 
 #####################################################
