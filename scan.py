@@ -79,13 +79,8 @@ def get_data(url):
 def get_upstream(package):
     """ Determine the current stable upstream version for a given package """
 
-    # query package release data from Pypi
+    # get package release data from Pypi
     upstream_data = get_data("https://pypi.python.org/pypi/{}/json".format(package))
-    '''
-    upstream_request = requests.get("https://pypi.python.org/pypi/" + package + "/json")
-    if upstream_request.status_code != 200:
-        throw_error('Pypi API request failed: {}'.format(package))
-    '''
 
     # distill current stable version
     data = json.loads(upstream_data.text)
@@ -134,7 +129,7 @@ def process_dependencies(deps_list):
     """ Process dependencies from project list """
 
     global TOTAL, OUTDATED, VULNERABLE
-    with open(str(deps_list)) as lines: # fixthis >> add progress bar
+    with open(str(deps_list)) as lines:
 
         # loop through file contents and process
         for line in lines:
@@ -164,13 +159,8 @@ def process_dependencies(deps_list):
                 else:
                     print(Fore.GREEN + "Version is up to date")
 
-                # check for CVEs
+                # get CVE data (if any)
                 cve_data = get_data("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:{}:{}".format(package, version))
-                '''''
-                cve_request = requests.get()
-                if cve_request.status_code != 200:
-                    throw_error('API request failed: {}/{}'.format(package, version))
-                '''
 
                 # process CVE data (if any)
                 vulnerable_deps = process_cves(cve_data.json())
@@ -198,7 +188,7 @@ def __main__():
     BOOLEAN = args.boolean
 
     # start scan
-    print("\nStarting {}...".format("self-check" if VERBOSE else "scan"))
+    print("\nStarting {}...".format("self-check" if args.check else "scan"))
 
     # confirm target path
     path = confirm_project_path(args)
@@ -213,17 +203,17 @@ def __main__():
 
     # compile summary
     # fixthis >> clean this up
-    print(Style.BRIGHT + '\nScan complete')
+    print(Style.BRIGHT + '\nSUMMARY')
     print("{} dependenc{} scanned".format(TOTAL, "y" if TOTAL == 1 else "ies"))
     # fixthis >> add percentages?
     if OUTDATED:
-        print(Style.BRIGHT + Fore.YELLOW + '{} outdated dependenc{}'.format(OUTDATED, "y" if OUTDATED == 1 else "ies"))
+        print(Style.BRIGHT + Fore.YELLOW + '{} outdated dependenc{} ({}%)'.format(OUTDATED, "y" if OUTDATED == 1 else "ies", int(OUTDATED * 100 / TOTAL)))
     else:
         print(Fore.GREEN + "0 outdated dependencies")
     if VULNERABLE:
-        print(Style.BRIGHT + Fore.RED + '{} vulnerable dependenc{}'.format(VULNERABLE, "y" if VULNERABLE == 1 else "ies"))
+        print(Style.BRIGHT + Fore.RED + '{} vulnerable dependenc{} ({}%)\n'.format(VULNERABLE, "y" if VULNERABLE == 1 else "ies", int(VULNERABLE * 100 / TOTAL)))
     else:
-        print(Fore.GREEN + "0 vulnerable dependencies\n\n")
+        print(Fore.GREEN + "0 vulnerable dependencies\n")
 
 if __name__ == '__main__':
     __main__()
