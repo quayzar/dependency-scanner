@@ -15,14 +15,11 @@ It accepts a user-provided path to a local target project directory; by default 
  * `--version, -V`: Return the script's current version and exit
  * `--check, -c`: Run Dependency Scanner on itself
  
-Sample Projects
----------------
+Testing
+-------
 
-There are two sample projects included with the repository to facilitate testing:
+A sample project (`sample-project.tar`) is included to facilitate testing. It contains 2 outdated dependencies and 2 vulnerable dependencies. (The directory has been archived into a single file to prevent Github's automated vulnerability scanner from flagging it.)
 
- * sample-projects/example
- * sample-projects/pytrader
- 
 In addition, set the self-check flag (`--check, -c`) to have Dependency Scanner perform a self-diagnostic.
 
 Features To Come
