@@ -8,8 +8,8 @@ Options
 
 It accepts a user-provided path to a local target project directory; by default it returns information on the project dependencies, including package name, version, current upstream version, and count of any CVEs. There are several flags to modify script behavior / response:
 
- * `--help, -h: Show help message and exit
- * `--path PATH, -p: Set path to local target project directory
+ * `--help, -h`: Show help message and exit
+ * `--path PATH, -p`: Set path to local target project directory
  * `--boolean, -b`: Return a Boolean assessment of the project (`FAIL` if any outdated or vulnerable dependencies; `PASS` if not), designed for use in automated testing
  * `--verbose, -v`: Return CVE details, including CVE ID, summary, and link to details
  * `--version, -V`: Return the script's current version and exit
@@ -33,17 +33,3 @@ Features To Come
  * Expand the number of dependency files supported
  * Expand the number of languages supported
  * Maintain an updated copy of the CVE database and refactor the querying process to permit batching
- 
-
-Additional Considerations
--------------------------
-
- 1. How would this function be scaled to dozens or hundreds of repositories?
-    * to come
- 2. How would I automate this script and track progress over time?
-    * Automate: Refactor this function as a dependency and add to a commit pipeline?
-    * Track progress: Create an account based on the user that records the results per project
- 3. How would this function be integrated into a CI / CD pipeline?
-    * See 2a above
-
-
