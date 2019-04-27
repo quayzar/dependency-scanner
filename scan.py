@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+""" Dependency Scanner - Scan a project for outdated or vulnerable dependencies """
 
 #####################################################
 # DEPENDENCIES
@@ -13,12 +14,17 @@ from packaging.version import parse
 from colorama import init, Fore, Style
 init(autoreset=True)
 
-# global defaults
-VERBOSE = False
-BOOLEAN = False
-TOTAL = 0
-OUTDATED = 0
-VULNERABLE = 0
+# set up default parameters
+PARAMS = {
+    "verbose": False,
+    "boolean": False,
+    "total": 0,
+    "outdated": 0,
+    "vulnerable": 0
+}
+RED = Style.BRIGHT + Fore.RED
+YELLOW = Style.BRIGHT + Fore.YELLOW
+GREEN = Fore.GREEN
 
 #####################################################
 # FUNCTIONS
@@ -26,7 +32,7 @@ VULNERABLE = 0
 
 def throw_error(msg):
     """ Output error message and stop """
-    print(Fore.RED + Style.BRIGHT + "FATAL ERROR\n{}".format(msg))
+    print(RED + "FATAL ERROR\n{}".format(msg))
     sys.exit()
 
 def confirm_project_path(args):
@@ -99,12 +105,12 @@ def process_cves(cves):
     # check number of CVEs (if any)
     length = len(cves)
     if length == 0: # no CVEs so stop
-        print(Fore.GREEN + "No CVEs found")
+        print(GREEN + "No CVEs found")
         return 0
 
     # CVEs found so output data
-    print(Style.BRIGHT + Fore.RED + "{} CVE{} FOUND".format(length, "" if length == 1 else "s"))
-    if VERBOSE:
+    print(RED + "{} CVE{} FOUND".format(length, "" if length == 1 else "s"))
+    if PARAMS['verbose']:
 
         for count, cve in enumerate(cves):
 
@@ -128,7 +134,6 @@ def process_cves(cves):
 def process_dependencies(deps_list):
     """ Process dependencies from project list """
 
-    global TOTAL, OUTDATED, VULNERABLE
     with open(str(deps_list)) as lines:
 
         # loop through file contents and process
@@ -142,7 +147,7 @@ def process_dependencies(deps_list):
                     line = tmp[0].strip()
 
                 # define package and version
-                TOTAL += 1
+                PARAMS['total'] += 1
                 data = line.split('==')
                 package = data[0]
                 try: # not all packages come with specific versions so EAFP
@@ -154,10 +159,10 @@ def process_dependencies(deps_list):
                 # gather current stable upstream version
                 upstream = get_upstream(package)
                 if upstream > version and version != "*":
-                    OUTDATED += 1
-                    print(Style.BRIGHT + Fore.YELLOW + "OUT OF DATE - Current version is {}".format(upstream))
+                    PARAMS['outdated'] += 1
+                    print(YELLOW + "OUT OF DATE - Current version is {}".format(upstream))
                 else:
-                    print(Fore.GREEN + "Version is up to date")
+                    print(GREEN + "Version is up to date")
 
                 # get CVE data (if any)
                 cve_data = get_data("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:{}:{}".format(package, version))
@@ -165,7 +170,7 @@ def process_dependencies(deps_list):
                 # process CVE data (if any)
                 vulnerable_deps = process_cves(cve_data.json())
                 if vulnerable_deps is not None:
-                    VULNERABLE += vulnerable_deps
+                    PARAMS['vulnerable'] += vulnerable_deps
 
 #####################################################
 # MAIN MODULE
@@ -183,9 +188,8 @@ def __main__():
 
     # parse user-provided input
     args = parser.parse_args()
-    global VERBOSE, BOOLEAN
-    VERBOSE = args.verbose
-    BOOLEAN = args.boolean
+    PARAMS['verbose'] = args.verbose
+    PARAMS['boolean'] = args.boolean
 
     # start scan
     print("\nStarting {}...".format("self-check" if args.check else "scan"))
@@ -204,16 +208,16 @@ def __main__():
     # compile summary
     # fixthis >> clean this up
     print(Style.BRIGHT + '\nSUMMARY')
-    print("{} dependenc{} scanned".format(TOTAL, "y" if TOTAL == 1 else "ies"))
+    print("{} dependenc{} scanned".format(PARAMS['total'], "y" if PARAMS['total'] == 1 else "ies"))
     # fixthis >> add percentages?
-    if OUTDATED:
-        print(Style.BRIGHT + Fore.YELLOW + '{} outdated dependenc{} ({}%)'.format(OUTDATED, "y" if OUTDATED == 1 else "ies", int(OUTDATED * 100 / TOTAL)))
+    if PARAMS['outdated']:
+        print(YELLOW + '{} outdated dependenc{} ({}%)'.format(PARAMS['outdated'], "y" if PARAMS['outdated'] == 1 else "ies", int(PARAMS['outdated'] * 100 / PARAMS['total'])))
     else:
-        print(Fore.GREEN + "0 outdated dependencies")
-    if VULNERABLE:
-        print(Style.BRIGHT + Fore.RED + '{} vulnerable dependenc{} ({}%)\n'.format(VULNERABLE, "y" if VULNERABLE == 1 else "ies", int(VULNERABLE * 100 / TOTAL)))
+        print(GREEN + "0 outdated dependencies")
+    if PARAMS['vulnerable']:
+        print(RED + '{} vulnerable dependenc{} ({}%)\n'.format(PARAMS['vulnerable'], "y" if PARAMS['vulnerable'] == 1 else "ies", int(PARAMS['vulnerable'] * 100 / PARAMS['total'])))
     else:
-        print(Fore.GREEN + "0 vulnerable dependencies\n")
+        print(GREEN + "0 vulnerable dependencies\n")
 
 if __name__ == '__main__':
     __main__()
