@@ -1,23 +1,40 @@
 Dependency Scanner
 ==================
 
-This function gathers all the dependencies of a project, checks them against Circl's [CVE Search API](https://www.circl.lu/services/cve-search/#public-web-api-of-cve-search), and returns which (if any) have vulnerabilities.
+This script scans a project for outdated or vulnerable dependencies. While it currently only supports Python projects with the default dependency list (`requirements.txt`), it could easily be extended to support other Python-specific dependency lists (e.g. `Pipfile`), Python library dependencies (`setup.py`), environment-specific lists (e.g. `requirements/prod.txt`), as well as other languages (e.g. Ruby)
 
-Specific tasks
---------------
+Options
+-------
 
-This function needs accomplish the following specific tasks:
+It accepts a user-provided path to a local target project directory; by default it returns information on the project dependencies, including package name, version, current upstream version, and count of any CVEs. There are several flags to modify script behavior / response:
 
- 1. Obtain all dependencies for the specified project on the local machine.
- 2. For each dependency, determine:
-  * current version used by the project
-  * latest upstream version
-  * if there are any Common Vulnerabilities and Exposures (CVEs) affecting the current version of the dependency
- 3. Return the data in a manner that communicates the issue we're trying to solve:
-  * what dependencies (and version) are in use
-  * whether any of these dependencies are out of date (a more recent version exists)
-  * whether any of these dependencies contain a known CVE
-  
+ * `--help, -h: Show help message and exit
+ * `--path PATH, -p: Set path to local target project directory
+ * `--boolean, -b`: Return a Boolean assessment of the project (`FAIL` if any outdated or vulnerable dependencies; `PASS` if not), designed for use in automated testing
+ * `--verbose, -v`: Return CVE details, including CVE ID, summary, and link to details
+ * `--version, -V`: Return the script's current version and exit
+ * `--check, -c`: Run Dependency Scanner on itself
+ 
+Sample Projects
+---------------
+
+There are two sample projects included with the repository to facilitate testing:
+
+ * sample-projects/example
+ * sample-projects/pytrader
+ 
+In addition, set the self-check flag (`--check, -c`) to have Dependency Scanner perform a self-diagnostic.
+
+Features To Come
+----------------
+
+ * Refactor function to run as a serverless service
+ * Add option for users to provide a Github repository web URL as the target project instead of a local directory
+ * Expand the number of dependency files supported
+ * Expand the number of languages supported
+ * Maintain an updated copy of the CVE database and refactor the querying process to permit batching
+ 
+
 Additional Considerations
 -------------------------
 
@@ -29,48 +46,4 @@ Additional Considerations
  3. How would this function be integrated into a CI / CD pipeline?
     * See 2a above
 
-Caveats & Assumptions
----------------------
 
- * currently only configured to scan Python projects
-
-Features To Come
-----------------
-
- * refactor function to be a serverless service (S3 static site > API Gateway > Lambda function > SQS > S3 static site)
- * add option for user to provide Github web URL for a project to be scanned (instead of local download)
- * return the number of CVEs per dependency and the severity
- * for non-supported frameworks, read dependencies right out of `/vendor` subdirectory?
- * expand the number of frameworks supported
-   * pipenv: Pipfile.lock, Pipfile
-   * Ruby: Gemfile.lock, Gemfile
- * replace current API with one that supports batch requests
-   * alternately, download all CVE data then make queries locally (particularly for large dependency sets)
-
-Supported Framework Dependency Lists
---------------------------
-
- * Python: requirements.txt
- * fixthis >> add more Python-specific list locations / names
- * fixthis >> ultimately add support for other platforms (e.g. Ruby)
-
-Logic Flow
-----------
-
- 1. Look for dependency file (e.g. requirements.txt)
- 2. Filter dependencies from list
- 3. For each dependency:
-    1. determine latest upstream version
-    2. determine whether CVEs exist for current version
-    3. add data to results
- 4. Return results in logical, easy to understand format
- 
-Cases
------
- 
- * project with no dependency list or in a non-supported framework
- * project with no dependencies
- * project with only good dependencies
- * project with vulnerable dependencies
-   * https://github.com/rubik/pytrader
-   * https://github.com/tanema/vlc-clickr
