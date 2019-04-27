@@ -102,41 +102,38 @@ def get_upstream(package):
 def process_cves(cves):
     """ Process CVE data (if any) """
 
-    # check number of CVEs (if any)
+    # check for CVEs
     length = len(cves)
-    if length == 0: # no CVEs so stop
+    if length == 0:
         print(GREEN + "No CVEs found")
-        return 0
+    else: # CVEs found so output data
 
-    # CVEs found so output data
-    print(RED + "{} CVE{} FOUND".format(length, "" if length == 1 else "s"))
-    if PARAMS['verbose']:
+        PARAMS['vulnerable'] += 1
+        print(RED + "{} CVE{} FOUND".format(length, "" if length == 1 else "s"))
+        if PARAMS['verbose']:
+            for count, cve in enumerate(cves):
 
-        for count, cve in enumerate(cves):
+                # output CVE data
+                print("\n{}. {}".format(count+1, cve['id']))
+                print("Description: {}".format(cve['summary']))
+                print("Link: https://www.cvedetails.com/cve/{}/".format(cve['id']))
 
-            print("\n{}. {}".format(count+1, cve['id']))
-            print(cve['summary'])
-            print("https://www.cvedetails.com/cve/{}/".format(cve['id']))
-
-            # assign severity (based on score)
-            score = float(cve['cvss'])
-            if score <= 3.9:
-                severity = "low"
-            elif 4.0 <= score <= 6.9:
-                severity = "medium"
-            elif score >= 7.0:
-                severity = "high"
-
-            print("Severity: {}".format(severity))
-
-    return length
+                # assign severity (based on score)
+                score = float(cve['cvss'])
+                if score <= 3.9:
+                    severity = "low"
+                elif 4.0 <= score <= 6.9:
+                    severity = "medium"
+                elif score >= 7.0:
+                    severity = RED + "high"
+                print("Severity: {} ({})".format(severity, cve['cvss']))
 
 def process_dependencies(deps_list):
     """ Process dependencies from project list """
 
+    # loop through file contents and process
     with open(str(deps_list)) as lines:
 
-        # loop through file contents and process
         for line in lines:
             line = line.strip()
             if line and not line.startswith('#'): # skip blank lines and comments
@@ -165,12 +162,23 @@ def process_dependencies(deps_list):
                     print(GREEN + "Version is up to date")
 
                 # get CVE data (if any)
-                cve_data = get_data("https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:{}:{}".format(package, version))
+                cve_url = "https://cve.circl.lu/api/cvefor/cpe:2.3:a:python:"
+                cve_data = get_data(cve_url + package + ":" + version)
 
                 # process CVE data (if any)
-                vulnerable_deps = process_cves(cve_data.json())
-                if vulnerable_deps is not None:
-                    PARAMS['vulnerable'] += vulnerable_deps
+                process_cves(cve_data.json())
+
+def output_summary(field):
+    """ Compile summary data for given field """
+
+    found = PARAMS[field]
+    if found:
+        color = YELLOW if field == "outdated" else RED
+        suffix = "y" if found == 1 else "ies"
+        percent = int(found * 100 / PARAMS['total'])
+        print(color + '{} {} dependenc{} ({}%)'.format(found, field, suffix, percent))
+    else:
+        print(GREEN + "0 {} dependencies".format(field))
 
 #####################################################
 # MAIN MODULE
@@ -179,17 +187,17 @@ def process_dependencies(deps_list):
 def __main__():
 
     # configure command-line options
-    parser = argparse.ArgumentParser(prog="Dependency Scanner", description="Scan a project for outdated or vulnerable dependencies")
+    parser = argparse.ArgumentParser(prog="Dependency Scanner")
     parser.add_argument('--path', '-p', help='Local path to target project directory')
-    parser.add_argument('--boolean', '-b', action="store_true", help="Return Boolean assessment (for automated testing)") # fixthis >> add
+    parser.add_argument('--boolean', '-b', action="store_true", help="Return Boolean assessment")
     parser.add_argument('--verbose', '-v', action="store_true", help="Return CVE details (if any)")
     parser.add_argument('--version', '-V', action="version", version='%(prog)s 0.1')
-    parser.add_argument('--check', '-c', action="store_true", help="Run %(prog)s on itself (self-check)")
+    parser.add_argument('--check', '-c', action="store_true", help="Run %(prog)s on itself")
 
     # parse user-provided input
     args = parser.parse_args()
     PARAMS['verbose'] = args.verbose
-    PARAMS['boolean'] = args.boolean
+    PARAMS['boolean'] = args.boolean # fixthis >> add
 
     # start scan
     print("\nStarting {}...".format("self-check" if args.check else "scan"))
@@ -200,24 +208,15 @@ def __main__():
     # find dependency list within project directory
     deps_list = find_dependencies_list(path)
 
-    #fixthis >> good to here
-
     # process dependencies within list
     process_dependencies(deps_list)
 
     # compile summary
-    # fixthis >> clean this up
     print(Style.BRIGHT + '\nSUMMARY')
     print("{} dependenc{} scanned".format(PARAMS['total'], "y" if PARAMS['total'] == 1 else "ies"))
-    # fixthis >> add percentages?
-    if PARAMS['outdated']:
-        print(YELLOW + '{} outdated dependenc{} ({}%)'.format(PARAMS['outdated'], "y" if PARAMS['outdated'] == 1 else "ies", int(PARAMS['outdated'] * 100 / PARAMS['total'])))
-    else:
-        print(GREEN + "0 outdated dependencies")
-    if PARAMS['vulnerable']:
-        print(RED + '{} vulnerable dependenc{} ({}%)\n'.format(PARAMS['vulnerable'], "y" if PARAMS['vulnerable'] == 1 else "ies", int(PARAMS['vulnerable'] * 100 / PARAMS['total'])))
-    else:
-        print(GREEN + "0 vulnerable dependencies\n")
+    output_summary('outdated')
+    output_summary('vulnerable')
+    print('\n')
 
 if __name__ == '__main__':
     __main__()
