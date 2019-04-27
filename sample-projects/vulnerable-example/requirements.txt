@@ -1,4 +1,0 @@
-pillow==2.6.1
-requests==2.2.1
-BeautifulSoup==3.2.1
-pytz
